@@ -16,7 +16,7 @@ type CaffePredictor struct {
 	predictor C.CaffePredictor
 }
 
-func NewCaffePredictor(model, trained string, width, height int) *CaffePredictor {
+func NewCaffePredictor(model, trained string) *CaffePredictor {
 	modelpath := C.CString(model)
 	defer C.free(unsafe.Pointer(modelpath))
 
@@ -24,7 +24,7 @@ func NewCaffePredictor(model, trained string, width, height int) *CaffePredictor
 	defer C.free(unsafe.Pointer(trainedpath))
 
 	return &CaffePredictor{
-		C.NewCaffePredictor(modelpath, trainedpath, C.int(width), C.int(height)),
+		C.NewCaffePredictor(modelpath, trainedpath),
 	}
 }
 

@@ -6,10 +6,9 @@ extern "C" {
 #include "cppcaffe/caffe.hpp"
 
 CaffePredictor NewCaffePredictor(const char *model_file,
-                                 const char *trained_file, int width,
-                                 int height) {
+                                 const char *trained_file) {
   return (CaffePredictor)(
-      new cppcaffe::CaffePredictor(model_file, trained_file, width, height));
+      new cppcaffe::CaffePredictor(model_file, trained_file));
 }
 
 double *Predict(CaffePredictor predictor, const char *imgname) {

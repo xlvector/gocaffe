@@ -13,33 +13,43 @@
 namespace cppcaffe {
 class CaffePredictor {
  private:
-  int width_, height_, nclass_;
+  int width_, height_, channel_, nclass_;
   caffe::shared_ptr<caffe::Net<float> > net_;
 
  public:
   CaffePredictor(){};
 
-  CaffePredictor(const char* model_file, const char* trained_file, int width,
-                 int height) {
+  CaffePredictor(const char* model_file, const char* trained_file) {
     caffe::Caffe::set_mode(caffe::Caffe::CPU);
     net_.reset(new caffe::Net<float>(model_file, caffe::TEST));
     net_->CopyTrainedLayersFrom(trained_file);
-    width_ = width;
-    height_ = height;
+    caffe::shared_ptr<caffe::Blob<float> > input = net_->blob_by_name("data");
+    std::vector<int> shape = input->shape();
+    width_ = shape[3];
+    height_ = shape[2];
+    channel_ = shape[1];
   }
 
   std::vector<double> predict(const char* imgname) {
     cv::Mat img;
     img = cv::imread(imgname, CV_LOAD_IMAGE_COLOR);
-    caffe::Blob<float>* blob = new caffe::Blob<float>(1, 3, height_, width_);
-    float* data = new float[3 * height_ * width_];
-    int cn = 3;
+    if(img.rows != height_ || img.cols != width_) {
+      std::cout << "resize image from " << img.cols << "x" << img.rows << " to " << width_ << "x" << height_ << std::endl;
+      cv::Mat dst;
+      cv::Size size(width_, height_);
+      cv::resize(img, dst, size);
+      img = dst;
+    }
+    caffe::Blob<float>* blob =
+        new caffe::Blob<float>(1, channel_, height_, width_);
+    float* data = new float[channel_ * height_ * width_];
+    int cn = channel_;
     uint8_t* pixel_ptr = (uint8_t*)img.data;
     for (int i = 0; i < img.rows; i++) {
       for (int j = 0; j < img.cols; j++) {
         for (int c = 0; c < cn; c++) {
           data[c * img.rows * img.cols + i * img.cols + j] =
-              (float)(pixel_ptr[i * img.cols * cn + j * cn + c]) / 256.0;
+              (float)(pixel_ptr[i * img.cols * cn + j * cn + c]) / 255.0;
         }
       }
     }
