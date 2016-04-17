@@ -1,13 +1,16 @@
 package main
 
 import (
+	"crypto/md5"
 	"flag"
 	"fmt"
 	"github.com/xlvector/gocaffe"
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
+	"time"
 )
 
 func loadLabel(f string) []string {
@@ -17,6 +20,10 @@ func loadLabel(f string) []string {
 	}
 	lines := strings.Split(string(buf), "\n")
 	return lines
+}
+
+func randomFile(url string) string {
+	return fmt.Sprintf("%d_%x.tmp", time.Now().UnixNano(), md5.Sum([]byte(url)))
 }
 
 func main() {
@@ -38,8 +45,10 @@ func main() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		ioutil.WriteFile("tmp_img", b, 0655)
-		prob = predictor.Predict("tmp_img")
+		imgname := randomFile(*img)
+		ioutil.WriteFile(imgname, b, 0655)
+		prob = predictor.Predict(imgname)
+		os.Remove(imgname)
 	} else {
 		prob = predictor.Predict(*img)
 	}
