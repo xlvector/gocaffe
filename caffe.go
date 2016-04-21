@@ -43,5 +43,8 @@ func (p *CaffePredictor) Predict(imgfile string) []float64 {
 	defer C.free(unsafe.Pointer(imgpath))
 
 	ret := C.Predict(p.predictor, imgpath)
+	if ret == nil {
+		return nil
+	}
 	return doubleToFloats(ret, p.NClass())
 }

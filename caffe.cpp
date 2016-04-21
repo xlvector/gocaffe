@@ -14,6 +14,9 @@ CaffePredictor NewCaffePredictor(const char *model_file,
 double *Predict(CaffePredictor predictor, const char *imgname) {
   std::vector<double> ret =
       ((cppcaffe::CaffePredictor *)predictor)->predict(imgname);
+  if(ret.empty()) {
+  	return NULL;
+  }
   double *fret = (double *)malloc(sizeof(double) * ret.size());
   for (int i = 0; i < ret.size(); i++) {
     fret[i] = ret[i];

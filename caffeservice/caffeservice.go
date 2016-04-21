@@ -78,6 +78,13 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	imgname := randomFile(img)
 	ioutil.WriteFile(imgname, b, 0655)
 	prob := p.predictor.Predict(imgname)
+	if prob == nil {
+		Json(w, map[string]interface{}{
+			"status": 103,
+			"msg":    "fail to predict",
+		}, 500)
+		return
+	}
 	os.Remove(imgname)
 	mprob := make(map[string]float64)
 	maxProb := 0.0
