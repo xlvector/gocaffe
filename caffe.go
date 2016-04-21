@@ -3,7 +3,7 @@ package gocaffe
 /*
 
 #cgo CXXFLAGS: -I/usr/local/include/ -I/usr/local/opt/openblas/include/ -I./deps/ -O3 -Wall
-#cgo LDFLAGS: -lcaffe -lboost_system -lstdc++ -lopencv_core -lopencv_highgui -lopencv_imgproc -lboost_filesystem
+#cgo LDFLAGS: -lcaffe -lboost_system -lstdc++ -lopencv_core -lopencv_highgui -lopencv_imgproc -lboost_filesystem -lopencv_imgcodecs
 #include <stdlib.h>
 #include "caffe.h"
 
