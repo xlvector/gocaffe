@@ -61,8 +61,9 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	resp, err := http.Get(img)
 	if err != nil {
 		Json(w, map[string]interface{}{
-			"status": 101,
-			"msg":    err.Error(),
+			"status":  101,
+			"msg":     err.Error(),
+			"img_src": img,
 		}, 500)
 		return
 	}
@@ -70,8 +71,9 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	b, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
 		Json(w, map[string]interface{}{
-			"status": 102,
-			"msg":    err.Error(),
+			"status":  102,
+			"msg":     err.Error(),
+			"img_src": img,
 		}, 500)
 		return
 	}
@@ -80,8 +82,9 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	prob := p.predictor.Predict(imgname)
 	if prob == nil {
 		Json(w, map[string]interface{}{
-			"status": 103,
-			"msg":    "fail to predict",
+			"status":  103,
+			"msg":     "fail to predict",
+			"img_src": img,
 		}, 500)
 		return
 	}
@@ -100,6 +103,7 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"status":            0,
 		"prob_distribution": mprob,
 		"best_label":        bestLabel,
+		"img_src":           img,
 	}, 200)
 }
 
