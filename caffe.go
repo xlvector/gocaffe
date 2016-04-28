@@ -33,6 +33,7 @@ func NewCaffePredictor(model, trained string) *CaffePredictor {
 
 	return &CaffePredictor{
 		predictor: C.NewCaffePredictor(modelpath, trainedpath),
+		lock:      &sync.Mutex{},
 	}
 }
 
