@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -134,11 +135,10 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	probs := p.predictor.PredictBatch(fs)
-	/*
-		for _, f := range fs {
-			os.Remove(f)
-		}
-	*/
+
+	for _, f := range fs {
+		os.Remove(f)
+	}
 
 	for k, ps := range probs {
 		if ps == nil || len(ps) == 0 {
