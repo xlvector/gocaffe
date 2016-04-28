@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
@@ -18,6 +19,10 @@ import (
 
 	"github.com/xlvector/dlog"
 	"github.com/xlvector/gocaffe"
+)
+
+const (
+	NPREDICTOR = 4
 )
 
 func loadLabel(f string) []string {
@@ -92,19 +97,26 @@ func randomFile(url string) string {
 }
 
 type CaffeService struct {
-	predictor *gocaffe.CaffePredictor
-	labels    []string
+	predictors []*gocaffe.CaffePredictor
+	labels     []string
 }
 
 func NewCaffeService(model, trained, label string) *CaffeService {
 	ret := &CaffeService{
-		predictor: gocaffe.NewCaffePredictor(model, trained),
-		labels:    loadLabel(label),
+		labels: loadLabel(label),
+	}
+	ret.predictors = make([]*gocaffe.CaffePredictor, NPREDICTOR)
+	for i := 0; i < NPREDICTOR; i++ {
+		ret.predictors[i] = gocaffe.NewCaffePredictor(model, trained)
 	}
 	if ret.labels == nil {
 		log.Fatalln("label file empty")
 	}
 	return ret
+}
+
+func (p *CaffeService) Predictor() *gocaffe.CaffePredictor {
+	return p.predictors[rand.Intn(NPREDICTOR)]
 }
 
 func Json(w http.ResponseWriter, data map[string]interface{}, code int) {
@@ -147,7 +159,7 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	probs := p.predictor.PredictBatch(fs)
+	probs := p.Predictor().PredictBatch(fs)
 
 	for _, f := range fs {
 		os.Remove(f)
@@ -161,7 +173,7 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}, 500)
 		}
 	}
-	bestMatch := p.predictor.GreedyMatch(probs)
+	bestMatch := p.Predictor().GreedyMatch(probs)
 	results := make([]map[string]interface{}, len(bestMatch))
 	for k, bm := range bestMatch {
 		/*
