@@ -159,14 +159,16 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	bestMatch := p.predictor.GreedyMatch(probs)
 	results := make([]map[string]interface{}, len(bestMatch))
 	for k, bm := range bestMatch {
-		dis := make(map[string]float64)
-		for j, v := range probs[k] {
-			dis[p.Label(j)] = v
-		}
+		/*
+			dis := make(map[string]float64)
+			for j, v := range probs[k] {
+				dis[p.Label(j)] = v
+			}
+		*/
 		results[k] = map[string]interface{}{
-			"img":          imgs[k],
-			"label":        p.Label(bm),
-			"distribution": dis,
+			"img":   imgs[k],
+			"label": p.Label(bm),
+			//"distribution": dis,
 		}
 	}
 	Json(w, map[string]interface{}{
