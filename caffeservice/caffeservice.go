@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"runtime"
 	"strings"
 	"sync"
 	"time"
@@ -176,6 +177,8 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
+	dlog.Println(runtime.NumCPU())
+	runtime.GOMAXPROCS(runtime.NumCPU())
 	model := flag.String("model", "", "model path")
 	trained := flag.String("trained", "", "trained model path")
 	label := flag.String("label", "", "label file")

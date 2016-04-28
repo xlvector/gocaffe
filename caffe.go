@@ -12,7 +12,6 @@ import "C"
 
 import (
 	"sort"
-	"sync"
 	"unsafe"
 
 	"github.com/xlvector/dlog"
@@ -20,7 +19,6 @@ import (
 
 type CaffePredictor struct {
 	predictor C.CaffePredictor
-	lock      *sync.Mutex
 }
 
 func NewCaffePredictor(model, trained string) *CaffePredictor {
@@ -32,7 +30,6 @@ func NewCaffePredictor(model, trained string) *CaffePredictor {
 
 	return &CaffePredictor{
 		predictor: C.NewCaffePredictor(modelpath, trainedpath),
-		lock:      &sync.Mutex{},
 	}
 }
 
@@ -51,8 +48,6 @@ func (p *CaffePredictor) NClass() int {
 }
 
 func (p *CaffePredictor) Predict(imgfile string) []float64 {
-	p.lock.Lock()
-	defer p.lock.Unlock()
 	imgpath := C.CString(imgfile)
 	defer C.free(unsafe.Pointer(imgpath))
 
