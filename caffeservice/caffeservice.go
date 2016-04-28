@@ -106,6 +106,13 @@ func Json(w http.ResponseWriter, data map[string]interface{}, code int) {
 	http.Error(w, string(b), code)
 }
 
+func (p *CaffeService) Label(i int) string {
+	if i < 0 || i >= len(p.labels) {
+		return "unknown"
+	}
+	return p.labels[i]
+}
+
 func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	tmpImgs := strings.Split(r.FormValue("imgs"), "|")
@@ -153,11 +160,11 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	for k, bm := range bestMatch {
 		dis := make(map[string]float64)
 		for j, v := range probs[k] {
-			dis[p.labels[j]] = v
+			dis[p.Label(j)] = v
 		}
 		results[k] = map[string]interface{}{
 			"img":          imgs[k],
-			"label":        p.labels[bm],
+			"label":        p.Label(bm),
 			"distribution": dis,
 		}
 	}
