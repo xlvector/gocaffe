@@ -104,7 +104,7 @@ func (p *CaffePredictor) GreedyMatch(probs [][]float64) []int {
 func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
 	start := time.Now().UnixNano()
 	ret := make([][]float64, 0, len(imgs))
-	for i, img := range imgs {
+	for _, img := range imgs {
 		out := p.Predict(img)
 		ret = append(ret, out)
 	}
