@@ -12,6 +12,7 @@ import "C"
 
 import (
 	"sort"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -20,6 +21,7 @@ import (
 
 type CaffePredictor struct {
 	predictor C.CaffePredictor
+	lock      *sync.Mutex
 }
 
 func NewCaffePredictor(model, trained string) *CaffePredictor {
@@ -49,6 +51,8 @@ func (p *CaffePredictor) NClass() int {
 }
 
 func (p *CaffePredictor) Predict(imgfile string) []float64 {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	imgpath := C.CString(imgfile)
 	defer C.free(unsafe.Pointer(imgpath))
 
@@ -111,28 +115,3 @@ func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
 	dlog.Println("predict all used(ms) : ", (time.Now().UnixNano()-start)/1000000)
 	return ret
 }
-
-/*
-func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
-	start := time.Now().UnixNano()
-	ret := make([][]float64, len(imgs))
-	wg := &sync.WaitGroup{}
-	ch := make(chan PredictResult, len(imgs)+10)
-	for i, img := range imgs {
-		wg.Add(1)
-		go func(index int, imgSrc string) {
-			out := p.Predict(img)
-			//ret = append(ret, out)
-			ch <- PredictResult{i, out}
-			wg.Done()
-		}(i, img)
-	}
-	wg.Wait()
-	close(ch)
-	for pr := range ch {
-		ret[pr.index] = pr.prob
-	}
-	dlog.Println("predict all used(ms) : ", (time.Now().UnixNano()-start)/1000000)
-	return ret
-}
-*/
