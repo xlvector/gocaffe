@@ -5,13 +5,15 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
-	"github.com/xlvector/gocaffe"
 	"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"strings"
+	"sync"
 	"time"
+
+	"github.com/xlvector/dlog"
+	"github.com/xlvector/gocaffe"
 )
 
 func loadLabel(f string) []string {
@@ -23,8 +25,63 @@ func loadLabel(f string) []string {
 	return lines
 }
 
+type IntStringPair struct {
+	index int
+	str   string
+}
+
+func Download(index int, url string, ch chan IntStringPair, wg *sync.WaitGroup) {
+	defer wg.Done()
+	c := &http.Client{
+		Timeout: time.Second * 2,
+	}
+	dlog.Println("begin download ", url)
+	resp, err := c.Get(url)
+	if resp == nil || resp.Body == nil {
+		dlog.Warn("nil resp")
+		return
+	}
+	defer resp.Body.Close()
+	if err != nil {
+		dlog.Warn("download err: %v", err)
+		return
+	}
+	b, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		dlog.Warn("download err: %v", err)
+		return
+	}
+	out := randomFile(url)
+	err = ioutil.WriteFile(out, b, 0655)
+	if err != nil {
+		dlog.Warn("download err: %v", err)
+		return
+	}
+	dlog.Println("download image ", url, " and save to ", out)
+	ch <- IntStringPair{index, out}
+}
+
+func DownloadAll(urls []string) []string {
+	wg := &sync.WaitGroup{}
+	ch := make(chan IntStringPair, 100)
+	for i, url := range urls {
+		wg.Add(1)
+		go func(index int, link string) {
+			Download(index, link, ch, wg)
+		}(i, url)
+	}
+	wg.Wait()
+	close(ch)
+
+	ret := make([]string, len(urls))
+	for p := range ch {
+		ret[p.index] = p.str
+	}
+	return ret
+}
+
 func randomFile(url string) string {
-	return fmt.Sprintf("%d_%x.tmp", time.Now().UnixNano(), md5.Sum([]byte(url)))
+	return fmt.Sprintf("%d_%x.jpg", time.Now().UnixNano(), md5.Sum([]byte(url)))
 }
 
 type CaffeService struct {
@@ -49,61 +106,65 @@ func Json(w http.ResponseWriter, data map[string]interface{}, code int) {
 }
 
 func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	queries := r.URL.Query()
-	img := queries.Get("img")
-	if len(img) == 0 {
+	r.ParseForm()
+	tmpImgs := strings.Split(r.FormValue("imgs"), "|")
+	imgs := make([]string, 0, len(tmpImgs))
+	for _, img := range tmpImgs {
+		if len(img) > 0 {
+			imgs = append(imgs, img)
+		}
+	}
+	if len(imgs) == 0 {
 		Json(w, map[string]interface{}{
 			"status": 100,
-			"msg":    "empty parameter: img",
+			"msg":    "no image to predict",
 		}, 500)
 		return
 	}
-	resp, err := http.Get(img)
-	if err != nil {
-		Json(w, map[string]interface{}{
-			"status":  101,
-			"msg":     err.Error(),
-			"img_src": img,
-		}, 500)
-		return
+
+	fs := DownloadAll(imgs)
+	for k, f := range fs {
+		if len(f) == 0 {
+			Json(w, map[string]interface{}{
+				"status": 101,
+				"msg":    "fail to download image: " + imgs[k],
+			}, 500)
+			return
+		}
 	}
-	defer resp.Body.Close()
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		Json(w, map[string]interface{}{
-			"status":  102,
-			"msg":     err.Error(),
-			"img_src": img,
-		}, 500)
-		return
+
+	probs := p.predictor.PredictBatch(fs)
+	/*
+		for _, f := range fs {
+			os.Remove(f)
+		}
+	*/
+
+	for k, ps := range probs {
+		if ps == nil || len(ps) == 0 {
+			Json(w, map[string]interface{}{
+				"status": 102,
+				"msg":    "fail to predict for image: " + imgs[k],
+			}, 500)
+		}
 	}
-	imgname := randomFile(img)
-	ioutil.WriteFile(imgname, b, 0655)
-	prob := p.predictor.Predict(imgname)
-	if prob == nil {
-		Json(w, map[string]interface{}{
-			"status":  103,
-			"msg":     "fail to predict",
-			"img_src": img,
-		}, 500)
-		return
-	}
-	os.Remove(imgname)
-	mprob := make(map[string]float64)
-	maxProb := 0.0
-	bestLabel := ""
-	for k, v := range prob {
-		mprob[p.labels[k]] = v
-		if maxProb < v {
-			maxProb = v
-			bestLabel = p.labels[k]
+	bestMatch := p.predictor.GreedyMatch(probs)
+	results := make([]map[string]interface{}, len(bestMatch))
+	for k, bm := range bestMatch {
+		dis := make(map[string]float64)
+		for j, v := range probs[k] {
+			dis[p.labels[j]] = v
+		}
+		results[k] = map[string]interface{}{
+			"img":          imgs[k],
+			"label":        p.labels[bm],
+			"distribution": dis,
 		}
 	}
 	Json(w, map[string]interface{}{
-		"status":            0,
-		"prob_distribution": mprob,
-		"best_label":        bestLabel,
-		"img_src":           img,
+		"status":  0,
+		"msg":     "ok",
+		"results": results,
 	}, 200)
 }
 

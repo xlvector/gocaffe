@@ -10,10 +10,17 @@ package gocaffe
 */
 import "C"
 
-import "unsafe"
+import (
+	"sort"
+	"sync"
+	"unsafe"
+
+	"github.com/xlvector/dlog"
+)
 
 type CaffePredictor struct {
 	predictor C.CaffePredictor
+	lock      *sync.Mutex
 }
 
 func NewCaffePredictor(model, trained string) *CaffePredictor {
@@ -24,14 +31,19 @@ func NewCaffePredictor(model, trained string) *CaffePredictor {
 	defer C.free(unsafe.Pointer(trainedpath))
 
 	return &CaffePredictor{
-		C.NewCaffePredictor(modelpath, trainedpath),
+		predictor: C.NewCaffePredictor(modelpath, trainedpath),
+		lock:      &sync.Mutex{},
 	}
 }
 
 func doubleToFloats(in *C.double, size int) []float64 {
 	defer C.free(unsafe.Pointer(in))
 	out := (*[1 << 30]float64)(unsafe.Pointer(in))[:size:size]
-	return out
+	out2 := make([]float64, size)
+	for i, v := range out {
+		out2[i] = v
+	}
+	return out2
 }
 
 func (p *CaffePredictor) NClass() int {
@@ -39,6 +51,8 @@ func (p *CaffePredictor) NClass() int {
 }
 
 func (p *CaffePredictor) Predict(imgfile string) []float64 {
+	p.lock.Lock()
+	defer p.lock.Unlock()
 	imgpath := C.CString(imgfile)
 	defer C.free(unsafe.Pointer(imgpath))
 
@@ -47,4 +61,58 @@ func (p *CaffePredictor) Predict(imgfile string) []float64 {
 		return nil
 	}
 	return doubleToFloats(ret, p.NClass())
+}
+
+type Triple struct {
+	index, label int
+	prob         float64
+}
+
+type TripleSlice []Triple
+
+func (c TripleSlice) Len() int {
+	return len(c)
+}
+func (c TripleSlice) Swap(i, j int) {
+	c[i], c[j] = c[j], c[i]
+}
+func (c TripleSlice) Less(i, j int) bool {
+	return c[i].prob > c[j].prob
+}
+
+func (p *CaffePredictor) GreedyMatch(probs [][]float64) []int {
+	trs := make(TripleSlice, 0, len(probs)*len(probs[0]))
+	for i, ps := range probs {
+		for l, v := range ps {
+			dlog.Println(i, "\t", l, "\t", v)
+			trs = append(trs, Triple{i, l, v})
+		}
+	}
+	sort.Sort(trs)
+	dlog.Println(trs)
+	ul := make([]byte, len(probs))
+	ur := make([]byte, len(probs[0]))
+	ret := make([]int, len(probs))
+	for i := 0; i < len(ret); i++ {
+		ret[i] = -1
+	}
+	for _, t := range trs {
+		if ul[t.index] > 0 || ur[t.label] > 0 {
+			continue
+		}
+		ul[t.index] = 1
+		ur[t.label] = 1
+		ret[t.index] = t.label
+	}
+	return ret
+}
+
+func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
+	ret := make([][]float64, 0, len(imgs))
+	for i, img := range imgs {
+		out := p.Predict(img)
+		ret = append(ret, out)
+		dlog.Println(ret[i])
+	}
+	return ret
 }
