@@ -12,7 +12,6 @@ import "C"
 
 import (
 	"sort"
-	"sync"
 	"time"
 	"unsafe"
 
@@ -102,11 +101,18 @@ func (p *CaffePredictor) GreedyMatch(probs [][]float64) []int {
 	return ret
 }
 
-type PredictResult struct {
-	index int
-	prob  []float64
+func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
+	start := time.Now().UnixNano()
+	ret := make([][]float64, 0, len(imgs))
+	for i, img := range imgs {
+		out := p.Predict(img)
+		ret = append(ret, out)
+	}
+	dlog.Println("predict all used(ms) : ", (time.Now().UnixNano()-start)/1000000)
+	return ret
 }
 
+/*
 func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
 	start := time.Now().UnixNano()
 	ret := make([][]float64, len(imgs))
@@ -129,3 +135,4 @@ func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
 	dlog.Println("predict all used(ms) : ", (time.Now().UnixNano()-start)/1000000)
 	return ret
 }
+*/
