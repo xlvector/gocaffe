@@ -14,16 +14,16 @@ namespace cppcaffe {
 class CaffePredictor {
  private:
   int width_, height_, channel_, nclass_;
-  caffe::shared_ptr<caffe::Net<double> > net_;
+  caffe::shared_ptr<caffe::Net<float> > net_;
 
  public:
   CaffePredictor(){};
 
   CaffePredictor(const char* model_file, const char* trained_file) {
     caffe::Caffe::set_mode(caffe::Caffe::CPU);
-    net_.reset(new caffe::Net<double>(model_file, caffe::TEST));
+    net_.reset(new caffe::Net<float>(model_file, caffe::TEST));
     net_->CopyTrainedLayersFrom(trained_file);
-    caffe::shared_ptr<caffe::Blob<double> > input = net_->blob_by_name("data");
+    caffe::shared_ptr<caffe::Blob<float> > input = net_->blob_by_name("data");
     std::vector<int> shape = input->shape();
     width_ = shape[3];
     height_ = shape[2];
@@ -43,23 +43,23 @@ class CaffePredictor {
       cv::resize(img, dst, size);
       img = dst;
     }
-    caffe::Blob<double>* blob =
-        new caffe::Blob<double>(1, channel_, height_, width_);
-    double* data = new double[channel_ * height_ * width_];
+    caffe::Blob<float>* blob =
+        new caffe::Blob<float>(1, channel_, height_, width_);
+    float* data = new float[channel_ * height_ * width_];
     int cn = channel_;
     uint8_t* pixel_ptr = (uint8_t*)img.data;
     for (int i = 0; i < img.rows; i++) {
       for (int j = 0; j < img.cols; j++) {
         for (int c = 0; c < cn; c++) {
           data[c * img.rows * img.cols + i * img.cols + j] =
-              (double)(pixel_ptr[i * img.cols * cn + j * cn + c]) / 255.0;
+              (float)(pixel_ptr[i * img.cols * cn + j * cn + c]) / 255.0;
         }
       }
     }
     blob->set_cpu_data(data);
-    std::vector<caffe::Blob<double>*> bottom;
+    std::vector<caffe::Blob<float>*> bottom;
     bottom.push_back(blob);
-    const std::vector<caffe::Blob<double>*>& rr = net_->Forward(bottom);
+    const std::vector<caffe::Blob<float>*>& rr = net_->Forward(bottom);
     delete blob;
     delete[] data;
     std::vector<double> ret(rr[0]->count());
