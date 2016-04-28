@@ -14,6 +14,8 @@ import (
 	"sync"
 	"time"
 
+	_ "net/http/pprof"
+
 	"github.com/xlvector/dlog"
 	"github.com/xlvector/gocaffe"
 )
