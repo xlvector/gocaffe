@@ -66,6 +66,7 @@ func Download(index int, url string, ch chan IntStringPair, wg *sync.WaitGroup) 
 }
 
 func DownloadAll(urls []string) []string {
+	start := time.Now().UnixNano()
 	wg := &sync.WaitGroup{}
 	ch := make(chan IntStringPair, 100)
 	for i, url := range urls {
@@ -81,6 +82,8 @@ func DownloadAll(urls []string) []string {
 	for p := range ch {
 		ret[p.index] = p.str
 	}
+	used := (time.Now().UnixNano() - start) / 1000000
+	dlog.Println("download all used(ms): ", used)
 	return ret
 }
 

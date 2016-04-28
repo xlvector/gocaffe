@@ -35,5 +35,5 @@ imgs = [
 
 buf = "|".join(imgs)
 postdata=urllib.urlencode({"imgs": buf})
-request = urllib2.Request("http://10.1.192.154:8011/predict",postdata)
+request = urllib2.Request("http://10.1.192.128:8011/predict",postdata)
 print urllib2.urlopen(request).read()
