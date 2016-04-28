@@ -12,6 +12,7 @@ import "C"
 
 import (
 	"sort"
+	"sync"
 	"time"
 	"unsafe"
 
@@ -80,12 +81,10 @@ func (p *CaffePredictor) GreedyMatch(probs [][]float64) []int {
 	trs := make(TripleSlice, 0, len(probs)*len(probs[0]))
 	for i, ps := range probs {
 		for l, v := range ps {
-			dlog.Println(i, "\t", l, "\t", v)
 			trs = append(trs, Triple{i, l, v})
 		}
 	}
 	sort.Sort(trs)
-	dlog.Println(trs)
 	ul := make([]byte, len(probs))
 	ur := make([]byte, len(probs[0]))
 	ret := make([]int, len(probs))
@@ -103,13 +102,29 @@ func (p *CaffePredictor) GreedyMatch(probs [][]float64) []int {
 	return ret
 }
 
+type PredictResult struct {
+	index int
+	prob  []float64
+}
+
 func (p *CaffePredictor) PredictBatch(imgs []string) [][]float64 {
 	start := time.Now().UnixNano()
-	ret := make([][]float64, 0, len(imgs))
+	ret := make([][]float64, len(imgs))
+	wg := &sync.WaitGroup{}
+	ch := make(chan PredictResult, len(imgs)+10)
 	for i, img := range imgs {
-		out := p.Predict(img)
-		ret = append(ret, out)
-		dlog.Println(ret[i])
+		wg.Add(1)
+		go func(index int, imgSrc string) {
+			out := p.Predict(img)
+			//ret = append(ret, out)
+			ch <- PredictResult{i, out}
+			wg.Done()
+		}(i, img)
+	}
+	wg.Wait()
+	close(ch)
+	for pr := range ch {
+		ret[pr.index] = pr.prob
 	}
 	dlog.Println("predict all used(ms) : ", (time.Now().UnixNano()-start)/1000000)
 	return ret
