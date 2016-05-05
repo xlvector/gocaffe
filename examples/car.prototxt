@@ -157,7 +157,7 @@ layer {
     lr_mult: 2
   }
   inner_product_param {
-    num_output: 64
+    num_output: 128
   }
 }
 layer {
@@ -172,7 +172,7 @@ layer {
     lr_mult: 2
   }
   inner_product_param {
-    num_output: 28
+    num_output: 30
   }
 }
 layer {
