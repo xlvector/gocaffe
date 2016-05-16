@@ -6,44 +6,9 @@ layer {
   input_param { shape: { dim: 1 dim: 3 dim: 100 dim: 150 } }
 }
 layer {
-  name: "conv0"
-  type: "Convolution"
-  bottom: "data"
-  top: "conv0"
-  param {
-    lr_mult: 1
-  }
-  param {
-    lr_mult: 2
-  }
-  convolution_param {
-    num_output: 32
-    pad: 3
-    kernel_size: 7
-    stride: 1
-  }
-}
-layer {
-  name: "pool0"
-  type: "Pooling"
-  bottom: "conv0"
-  top: "pool0"
-  pooling_param {
-    pool: MAX
-    kernel_size: 3
-    stride: 2
-  }
-}
-layer {
-  name: "relu0"
-  type: "ReLU"
-  bottom: "pool0"
-  top: "pool0"
-}
-layer {
   name: "conv1"
   type: "Convolution"
-  bottom: "pool0"
+  bottom: "data"
   top: "conv1"
   param {
     lr_mult: 1
