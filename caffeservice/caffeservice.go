@@ -47,34 +47,38 @@ func ModifyUrl(url string) string {
 
 func Download(index int, url string, ch chan IntStringPair, wg *sync.WaitGroup) {
 	defer wg.Done()
-	c := &http.Client{
-		Timeout: time.Second * 2,
-	}
-	url = ModifyUrl(url)
-	dlog.Println("begin download ", url)
-	resp, err := c.Get(url)
-	if resp == nil || resp.Body == nil {
-		dlog.Warn("nil resp")
+	for k = 0; k < 2; k++ {
+		c := &http.Client{
+			Timeout: time.Second * 2,
+		}
+		url = ModifyUrl(url)
+		dlog.Println("begin download ", url)
+		resp, err := c.Get(url)
+		if resp == nil || resp.Body == nil {
+			dlog.Warn("nil resp")
+			continue
+		}
+		defer resp.Body.Close()
+		if err != nil {
+			dlog.Warn("download err: %v", err)
+			continue
+		}
+		b, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			dlog.Warn("download err: %v", err)
+			continue
+		}
+		out := randomFile(url)
+		err = ioutil.WriteFile(out, b, 0655)
+		if err != nil {
+			dlog.Warn("download err: %v", err)
+			continue
+		}
+		dlog.Println("download image ", url, " and save to ", out)
+		ch <- IntStringPair{index, out}
 		return
 	}
-	defer resp.Body.Close()
-	if err != nil {
-		dlog.Warn("download err: %v", err)
-		return
-	}
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		dlog.Warn("download err: %v", err)
-		return
-	}
-	out := randomFile(url)
-	err = ioutil.WriteFile(out, b, 0655)
-	if err != nil {
-		dlog.Warn("download err: %v", err)
-		return
-	}
-	dlog.Println("download image ", url, " and save to ", out)
-	ch <- IntStringPair{index, out}
+	dlog.Println("fail to download: ", url)
 }
 
 func DownloadAll(urls []string) []string {
@@ -138,6 +142,16 @@ func (p *CaffeService) Label(i int) string {
 	return p.labels[i]
 }
 
+func DeleteAll(fs []string) {
+	for _, f := range fs {
+		dlog.Println("begin to remove: ", f)
+		err := os.Remove(f)
+		if err != nil {
+			dlog.Warn("fail to delete file %s: %v", f, err)
+		}
+	}
+}
+
 func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	r.ParseForm()
 	tmpImgs := strings.Split(r.FormValue("imgs"), "|")
@@ -156,25 +170,20 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	fs := DownloadAll(imgs)
+
 	for k, f := range fs {
 		if len(f) == 0 {
 			Json(w, map[string]interface{}{
 				"status": 101,
 				"msg":    "fail to download image: " + imgs[k],
 			}, 500)
+			DeleteAll(fs)
 			return
 		}
 	}
 
 	probs := p.Predictor().PredictBatch(fs)
-
-	for _, f := range fs {
-		dlog.Println("begin to remove: ", f)
-		err := os.Remove(f)
-		if err != nil {
-			dlog.Warn("fail to delete file %s: %v", f, err)
-		}
-	}
+	DeleteAll(fs)
 
 	for k, ps := range probs {
 		if ps == nil || len(ps) == 0 {
