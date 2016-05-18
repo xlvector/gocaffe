@@ -6,7 +6,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -39,11 +38,19 @@ type IntStringPair struct {
 	str   string
 }
 
+func ModifyUrl(url string) string {
+	if strings.HasSuffix(url, "@base@tag=imgScale&w=150&h=100&q=66") {
+		return url + "c=1&m=2"
+	}
+	return url
+}
+
 func Download(index int, url string, ch chan IntStringPair, wg *sync.WaitGroup) {
 	defer wg.Done()
 	c := &http.Client{
 		Timeout: time.Second * 2,
 	}
+	url = ModifyUrl(url)
 	dlog.Println("begin download ", url)
 	resp, err := c.Get(url)
 	if resp == nil || resp.Body == nil {
@@ -110,7 +117,7 @@ func NewCaffeService(model, trained, label string) *CaffeService {
 		ret.predictors[i] = gocaffe.NewCaffePredictor(model, trained)
 	}
 	if ret.labels == nil {
-		log.Fatalln("label file empty")
+		dlog.Fatalln("label file empty")
 	}
 	return ret
 }
@@ -207,5 +214,5 @@ func main() {
 	flag.Parse()
 	cs := NewCaffeService(*model, *trained, *label)
 	http.Handle("/predict", cs)
-	log.Fatal(http.ListenAndServe(":8011", nil))
+	dlog.Fatalln(http.ListenAndServe(":8011", nil))
 }
