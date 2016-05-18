@@ -47,7 +47,7 @@ func ModifyUrl(url string) string {
 
 func Download(index int, url string, ch chan IntStringPair, wg *sync.WaitGroup) {
 	defer wg.Done()
-	for k = 0; k < 2; k++ {
+	for k := 0; k < 2; k++ {
 		c := &http.Client{
 			Timeout: time.Second * 2,
 		}
