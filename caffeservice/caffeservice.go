@@ -169,6 +169,7 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	probs := p.Predictor().PredictBatch(fs)
 
 	for _, f := range fs {
+		dlog.Println("begin to remove: ", f)
 		err := os.Remove(f)
 		if err != nil {
 			dlog.Warn("fail to delete file %s: %v", f, err)
