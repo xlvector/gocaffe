@@ -191,6 +191,7 @@ func (p *CaffeService) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 				"status": 102,
 				"msg":    "fail to predict for image: " + imgs[k],
 			}, 500)
+			return
 		}
 	}
 	bestMatch := p.Predictor().GreedyMatch(probs)
