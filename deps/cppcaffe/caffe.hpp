@@ -33,7 +33,9 @@ class CaffePredictor {
   std::vector<double> predict(const char* imgname) {
     cv::Mat img;
     img = cv::imread(imgname, CV_LOAD_IMAGE_COLOR);
+    std::cout << "img size: " << img.rows << " " << img.cols << std::endl;
     if(img.rows * 2 < height_ || img.cols * 2 < width_) {
+      std::cout << "image size error: " << img.rows << " " << img.cols << std::endl;
       return std::vector<double>();
     }
     if(img.rows != height_ || img.cols != width_) {
