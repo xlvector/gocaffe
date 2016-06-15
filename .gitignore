@@ -1,3 +1,4 @@
+*.tsv
 .DS_Store
 *.jpg
 caffepred/caffepred

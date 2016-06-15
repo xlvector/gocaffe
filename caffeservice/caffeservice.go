@@ -40,7 +40,7 @@ type IntStringPair struct {
 
 func ModifyUrl(url string) string {
 	if strings.HasSuffix(url, "@base@tag=imgScale&w=150&h=100&q=66") {
-		return url + "&c=1&m=2"
+		return url + "&m=2"
 	}
 	return url
 }
