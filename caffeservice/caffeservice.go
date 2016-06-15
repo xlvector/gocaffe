@@ -40,7 +40,7 @@ type IntStringPair struct {
 
 func ModifyUrl(url string) string {
 	if strings.HasSuffix(url, "@base@tag=imgScale&w=150&h=100&q=66") {
-		return url + "&m=2"
+		return url + "&c=1&m=2"
 	}
 	return url
 }
@@ -104,7 +104,13 @@ func DownloadAll(urls []string) []string {
 }
 
 func randomFile(url string) string {
-	return fmt.Sprintf("%d_%x.jpg", time.Now().UnixNano(), md5.Sum([]byte(url)))
+	ext := ".jpg"
+	if strings.Contains(url, ".gif") {
+		ext = ".gif"
+	} else if strings.Contains(url, ".png") {
+		ext = ".png"
+	}
+	return fmt.Sprintf("%d_%x", time.Now().UnixNano(), md5.Sum([]byte(url))) + ext
 }
 
 type CaffeService struct {
